@@ -13,6 +13,11 @@ FlightPlan _$FlightPlanFromJson(Map<String, dynamic> json) => FlightPlan(
   aircraftModel: json['aircraft_model'] as String? ?? '',
   plannedFuel: (json['planned_fuel'] as num?)?.toDouble() ?? 0.0,
   date: DateTime.parse(json['date'] as String),
+  suggestedDistribution: json['suggested_distribution'] == null
+      ? const TankReadings(left: 0, center: 0, right: 0)
+      : TankReadings.fromJson(
+          json['suggested_distribution'] as Map<String, dynamic>,
+        ),
 );
 
 Map<String, dynamic> _$FlightPlanToJson(FlightPlan instance) =>
@@ -23,12 +28,13 @@ Map<String, dynamic> _$FlightPlanToJson(FlightPlan instance) =>
       'aircraft_model': instance.aircraftModel,
       'planned_fuel': instance.plannedFuel,
       'date': instance.date.toIso8601String(),
+      'suggested_distribution': instance.suggestedDistribution,
     };
 
 TankReadings _$TankReadingsFromJson(Map<String, dynamic> json) => TankReadings(
-  left: (json['left'] as num?)?.toDouble(),
-  center: (json['center'] as num?)?.toDouble(),
-  right: (json['right'] as num?)?.toDouble(),
+  left: (json['left'] as num?)?.toDouble() ?? 0.0,
+  center: (json['center'] as num?)?.toDouble() ?? 0.0,
+  right: (json['right'] as num?)?.toDouble() ?? 0.0,
 );
 
 Map<String, dynamic> _$TankReadingsToJson(TankReadings instance) =>

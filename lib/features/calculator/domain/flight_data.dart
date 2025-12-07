@@ -2,10 +2,8 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'flight_data.g.dart';
 
-/// Represents the unit of measurement for fuel.
 enum FuelUnit { liters, gallons }
 
-/// Holds the configuration data for the "Plan" tab.
 @JsonSerializable(fieldRename: FieldRename.snake)
 class FlightPlan {
   final String aircraftRegistration;
@@ -15,6 +13,9 @@ class FlightPlan {
   final double plannedFuel;
   final DateTime date;
 
+  // NEW: Holds the calculated distribution (Target values)
+  final TankReadings suggestedDistribution;
+
   const FlightPlan({
     this.aircraftRegistration = '',
     this.flightNumber = '',
@@ -22,9 +23,13 @@ class FlightPlan {
     this.aircraftModel = '',
     this.plannedFuel = 0.0,
     required this.date,
+    this.suggestedDistribution = const TankReadings(
+      left: 0,
+      center: 0,
+      right: 0,
+    ),
   });
 
-  /// Creates a copy of this object with the given fields replaced with the new values.
   FlightPlan copyWith({
     String? aircraftRegistration,
     String? flightNumber,
@@ -32,6 +37,7 @@ class FlightPlan {
     String? aircraftModel,
     double? plannedFuel,
     DateTime? date,
+    TankReadings? suggestedDistribution,
   }) {
     return FlightPlan(
       aircraftRegistration: aircraftRegistration ?? this.aircraftRegistration,
@@ -40,6 +46,8 @@ class FlightPlan {
       aircraftModel: aircraftModel ?? this.aircraftModel,
       plannedFuel: plannedFuel ?? this.plannedFuel,
       date: date ?? this.date,
+      suggestedDistribution:
+          suggestedDistribution ?? this.suggestedDistribution,
     );
   }
 
@@ -48,16 +56,15 @@ class FlightPlan {
   Map<String, dynamic> toJson() => _$FlightPlanToJson(this);
 }
 
-/// Holds the tank readings (Left, Center, Right).
 @JsonSerializable(fieldRename: FieldRename.snake)
 class TankReadings {
-  final double? left;
-  final double? center;
-  final double? right;
+  final double left;
+  final double center;
+  final double right;
 
-  const TankReadings({this.left, this.center, this.right});
+  const TankReadings({this.left = 0.0, this.center = 0.0, this.right = 0.0});
 
-  double get total => (left ?? 0) + (center ?? 0) + (right ?? 0);
+  double get total => left + center + right;
 
   TankReadings copyWith({double? left, double? center, double? right}) {
     return TankReadings(
@@ -72,27 +79,23 @@ class TankReadings {
   Map<String, dynamic> toJson() => _$TankReadingsToJson(this);
 }
 
-/// Holds the data for the "Inputs" tab (Before/After readings and Uplift).
+// ... (FuelInputData remains the same as previous step) ...
 @JsonSerializable(fieldRename: FieldRename.snake)
 class FuelInputData {
   final TankReadings readingsBefore;
   final TankReadings readingsAfter;
-
-  // A list to support 1 to N trucks
   final List<double> truckVolumes;
-
   final double density;
   final FuelUnit uploadUnit;
 
   const FuelInputData({
     this.readingsBefore = const TankReadings(),
     this.readingsAfter = const TankReadings(),
-    this.truckVolumes = const [0.0], // Start with one empty truck by default
+    this.truckVolumes = const [0.0],
     this.density = 0.800,
     this.uploadUnit = FuelUnit.liters,
   });
 
-  /// Helper to get total volume from all trucks
   double get totalTruckVolume =>
       truckVolumes.fold(0, (sum, current) => sum + current);
 
