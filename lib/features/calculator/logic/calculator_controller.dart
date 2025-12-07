@@ -2,13 +2,80 @@ import 'package:flutter/foundation.dart';
 import '../domain/flight_data.dart';
 
 class CalculatorController extends ChangeNotifier {
+  // --- Constants for Limits ---
+  static const double kMaxTankSafe = 40.1; // Distribution limit
+  static const double kMaxTankPhysical = 40.7; // Physical limit left/right
+  static const double kMaxCenterPhysical = 80.4; // Physical limit center
+
   // --- State ---
-  final FlightPlan _plan = FlightPlan(date: DateTime.now());
+  FlightPlan _plan = FlightPlan(date: DateTime.now());
   FuelInputData _inputs = const FuelInputData();
 
   // --- Getters ---
   FlightPlan get plan => _plan;
   FuelInputData get inputs => _inputs;
+
+  // --- Formatting Helper ---
+  /// Rounds a double to 1 decimal place for calculations
+  double _roundTo1Decimal(double value) {
+    return (value * 10).round() / 10;
+  }
+
+  // --- Logic: Plan & Distribution ---
+
+  void updateFlightDetails({
+    String? reg,
+    String? flightNum,
+    String? dest,
+    String? model,
+    DateTime? date,
+  }) {
+    _plan = _plan.copyWith(
+      aircraftRegistration: reg,
+      flightNumber: flightNum,
+      destination: dest,
+      aircraftModel: model,
+      date: date,
+    );
+    notifyListeners();
+  }
+
+  /// Updates planned fuel and auto-calculates tank distribution
+  void updatePlannedFuel(String value) {
+    final double? totalRequested = double.tryParse(value);
+    if (totalRequested == null) return;
+
+    // 1. Calculate Distribution Logic
+    double left = 0;
+    double right = 0;
+    double center = 0;
+
+    // The threshold is when both wings are at safe max (40.1 * 2 = 80.2)
+    const double wingCapacity = kMaxTankSafe * 2;
+
+    if (totalRequested <= wingCapacity) {
+      // Scenario: Less than wing capacity. Split equally.
+      left = totalRequested / 2;
+      right = totalRequested / 2;
+      center = 0;
+    } else {
+      // Scenario: Fill wings to safe max, rest to center.
+      left = kMaxTankSafe;
+      right = kMaxTankSafe;
+      center = totalRequested - wingCapacity;
+    }
+
+    // 2. Update Plan with new values (rounded to 1 decimal)
+    _plan = _plan.copyWith(
+      plannedFuel: totalRequested,
+      suggestedDistribution: TankReadings(
+        left: _roundTo1Decimal(left),
+        right: _roundTo1Decimal(right),
+        center: _roundTo1Decimal(center),
+      ),
+    );
+    notifyListeners();
+  }
 
   // --- Logic: Truck Management ---
   void addTruck() {
@@ -28,6 +95,9 @@ class CalculatorController extends ChangeNotifier {
   void updateTruckVolume(int index, String value) {
     final double? parsed = double.tryParse(value);
     if (parsed == null) return;
+
+    // Ensure we store it rounded to 1 decimal if needed,
+    // though usually raw input is preferred until display.
     final updatedList = List<double>.from(_inputs.truckVolumes);
     updatedList[index] = parsed;
     _inputs = _inputs.copyWith(truckVolumes: updatedList);
@@ -65,42 +135,33 @@ class CalculatorController extends ChangeNotifier {
     }
   }
 
-  // --- Logic: Unit Selection ---
   void toggleTruckUnit(FuelUnit unit) {
     _inputs = _inputs.copyWith(uploadUnit: unit);
     notifyListeners();
   }
 
-  // --- CORE CALCULATIONS (LBS) ---
+  // --- Calculations ---
 
-  /// Returns the total Uplifted Volume in Gallons
   double get totalUpliftVolumeGallons {
     double totalRaw = _inputs.totalTruckVolume;
-
     if (_inputs.uploadUnit == FuelUnit.liters) {
-      // Logic: Liters * 0.2641 = Gallons
       return totalRaw * 0.2641;
     } else {
-      // Already in Gallons
       return totalRaw;
     }
   }
 
-  /// Returns total Weight Added in Lbs
   int get totalPoundsAdded {
-    // Logic: Gallons * Density = Lbs
-    // Note: User must enter density in Lbs/Gal (approx 6.7) OR we handle SG conversion logic later.
-    // For now, assuming user inputs specific Lbs/Gal density.
     return (totalUpliftVolumeGallons * _inputs.density).round();
   }
 
-  /// Returns the Fuel Quantity Difference (After - Before)
   double get gaugeDifference {
-    return _inputs.readingsAfter.total - _inputs.readingsBefore.total;
+    return _roundTo1Decimal(
+      _inputs.readingsAfter.total - _inputs.readingsBefore.total,
+    );
   }
 
-  /// Returns the discrepancy between Metered(Trucks) and Gauge(Tanks)
   double get discrepancy {
-    return (totalPoundsAdded - gaugeDifference).abs();
+    return _roundTo1Decimal((totalPoundsAdded - gaugeDifference).abs());
   }
 }
