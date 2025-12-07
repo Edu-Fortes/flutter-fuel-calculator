@@ -3,7 +3,7 @@ import '../domain/flight_data.dart';
 
 class CalculatorController extends ChangeNotifier {
   // --- State ---
-  FlightPlan _plan = FlightPlan(date: DateTime.now());
+  final FlightPlan _plan = FlightPlan(date: DateTime.now());
   FuelInputData _inputs = const FuelInputData();
 
   // --- Getters ---
