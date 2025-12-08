@@ -77,7 +77,37 @@ class ScaffoldWithNavBar extends StatelessWidget {
         title: const Text('Fuel Uplift'),
         centerTitle: true,
         actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.settings)),
+          // RESET BUTTON
+          IconButton(
+            tooltip: 'Reset All Data',
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              // Show confirmation dialog
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Reset Calculation?'),
+                  content: const Text(
+                    'This will clear all aircraft and fuel data.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        // Call the reset method
+                        context.read<CalculatorController>().reset();
+                        Navigator.pop(ctx);
+                      },
+                      child: const Text('Reset'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ],
       ),
       body: Column(

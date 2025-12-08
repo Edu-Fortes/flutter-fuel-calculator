@@ -165,30 +165,58 @@ class InputScreen extends StatelessWidget {
           // --- SECTION 3: PARAMETERS ---
           _buildSectionHeader(context, 'Parameters'),
           Card(
-            child: ListTile(
-              // CHANGED: Clarified Label
-              title: const Text('Density (Lbs/Gal)'),
-              subtitle: const Text('Standard Jet A1: 6.70'),
-              trailing: SizedBox(
-                width: 100,
-                child: TextFormField(
-                  // CHANGED: Logic to display 6.7 default clearly
-                  initialValue: inputs.density.toString(),
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  textAlign: TextAlign.end,
-                  decoration: const InputDecoration(
-                    hintText: '6.70',
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 0,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Fuel Density', style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Enter Density (Lbs/Gal) OR Specific Gravity (SG).\nValues < 1.0 (e.g. 0.800) are treated as SG and converted automatically.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
-                    border: OutlineInputBorder(),
-                    suffixText: 'lbs/gal',
                   ),
-                  onChanged: (val) => controller.updateDensity(val),
-                ),
+                  const SizedBox(height: 16),
+
+                  // Row with wide Input Field
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          // Logic to show 6.7 default clearly
+                          initialValue: inputs.density.toString(),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: const InputDecoration(
+                            labelText: 'Density Value',
+                            hintText: 'e.g. 6.70 or 0.800',
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 16,
+                            ),
+                            // We put the unit as a suffix ICON/Widget to avoid text overlap
+                            suffixIcon: Padding(
+                              padding: EdgeInsets.all(12.0),
+                              child: Text(
+                                'lbs/gal',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ),
+                            suffixIconConstraints: BoxConstraints(
+                              minWidth: 0,
+                              minHeight: 0,
+                            ),
+                          ),
+                          onChanged: (val) => controller.updateDensity(val),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
@@ -271,7 +299,7 @@ class _TankInputField extends StatelessWidget {
   }
 }
 
-// CHANGED: Simplified Truck Row to fit inside the main card
+// Simplified Truck Row to fit inside the main card
 class _TruckInputRow extends StatelessWidget {
   final int index;
   final double value;

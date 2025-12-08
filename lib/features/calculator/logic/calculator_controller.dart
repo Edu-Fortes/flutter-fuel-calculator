@@ -15,6 +15,23 @@ class CalculatorController extends ChangeNotifier {
   FlightPlan get plan => _plan;
   FuelInputData get inputs => _inputs;
 
+  // --- Actions ---
+  /// Resets the entire session to default values
+  void reset() {
+    // Reset Plan (keep current date, default to 767)
+    _plan = FlightPlan(date: DateTime.now(), aircraftModel: '767');
+
+    // Reset Inputs (default density 6.70)
+    _inputs = const FuelInputData(density: 6.70, uploadUnit: FuelUnit.liters);
+
+    notifyListeners();
+  }
+
+  // --- Helpers for Display ---
+
+  /// Helper to get the raw total volume (for display in Tech Log)
+  double get totalTruckRawVolume => _inputs.totalTruckVolume;
+
   // --- Formatting Helper ---
   /// Rounds a double to 1 decimal place for calculations
   double _roundTo1Decimal(double value) {
@@ -159,8 +176,18 @@ class CalculatorController extends ChangeNotifier {
     }
   }
 
+  /// Returns total Weight Added in Lbs
   int get totalPoundsAdded {
-    return (totalUpliftVolumeGallons * _inputs.density).round();
+    double effectiveDensity = _inputs.density;
+
+    // SMART LOGIC:
+    // If user enters specific gravity (e.g. 0.800), convert to Lbs/Gal.
+    // Uses 8.345 (approx weight of water in lbs/gal).
+    if (effectiveDensity < 1.0 && effectiveDensity > 0) {
+      effectiveDensity = effectiveDensity * 8.345;
+    }
+
+    return (totalUpliftVolumeGallons * effectiveDensity).round();
   }
 
   double get gaugeDifference {
