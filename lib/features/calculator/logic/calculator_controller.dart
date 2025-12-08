@@ -1,10 +1,11 @@
 import 'package:flutter/foundation.dart';
+import 'dart:math' as math; // Import math for min function
 import '../domain/flight_data.dart';
 
 class CalculatorController extends ChangeNotifier {
-  // --- Constants for Limits ---
-  static const double kMaxTankSafe = 40.1; // Distribution limit
-  static const double kLitersToGallons = 0.2641; // Conversion Factor
+  // --- Constants ---
+  static const double kMaxTankSafe = 40.1;
+  static const double kLitersToGallons = 0.2641;
 
   // --- State ---
   FlightPlan _plan = FlightPlan(date: DateTime.now(), aircraftModel: '767');
@@ -34,8 +35,7 @@ class CalculatorController extends ChangeNotifier {
     return 'N${raw}FE';
   }
 
-  // --- Logic: Plan & Distribution ---
-
+  // --- Logic: Flight Details ---
   void updateFlightDetails({
     String? reg,
     String? flightNum,
@@ -53,36 +53,27 @@ class CalculatorController extends ChangeNotifier {
     notifyListeners();
   }
 
+  // --- Logic: Planning & Distribution ---
   void updatePlannedFuel(String value) {
     final double? base = double.tryParse(value);
     if (base == null) return;
-
-    // Update Base
     _plan = _plan.copyWith(plannedFuel: base);
     _recalculateDistribution();
   }
 
-  // NEW: Update Extra Fuel
   void updateExtraFuel(double delta) {
     double newExtra = _plan.extraFuel + delta;
-    // Fix floating point errors (e.g. 0.3000004)
     newExtra = double.parse(newExtra.toStringAsFixed(1));
-
-    // Prevent negative? Assuming yes for now.
     if (newExtra < 0) newExtra = 0.0;
-
     _plan = _plan.copyWith(extraFuel: newExtra);
     _recalculateDistribution();
   }
 
   void _recalculateDistribution() {
-    // 1. Calculate Target (Base + Extra)
     final double totalRequested = _plan.totalTargetFuel;
-
     double left = 0;
     double right = 0;
     double center = 0;
-
     const double wingCapacity = kMaxTankSafe * 2;
 
     if (totalRequested <= wingCapacity) {
@@ -95,7 +86,6 @@ class CalculatorController extends ChangeNotifier {
       center = totalRequested - wingCapacity;
     }
 
-    // 2. Update Plan
     _plan = _plan.copyWith(
       suggestedDistribution: TankReadings(
         left: _roundTo1Decimal(left),
@@ -168,19 +158,23 @@ class CalculatorController extends ChangeNotifier {
 
   // --- TECH LOG CALCULATIONS ---
 
-  // 1. Total Metered Fuel (Normalized to Gallons)
+  /// 1. Total Metered Fuel (Gallons)
   double get totalMeteredGallons {
     double totalRaw = _inputs.totalTruckVolume;
+    double valInGallons;
+
     if (_inputs.uploadUnit == FuelUnit.liters) {
-      return totalRaw * kLitersToGallons;
+      valInGallons = totalRaw * kLitersToGallons;
+    } else {
+      valInGallons = totalRaw;
     }
-    return totalRaw;
+    // Round to 3 decimal places
+    return (valInGallons * 1000).roundToDouble() / 1000;
   }
 
-  // 2. Total Pounds Added
+  /// 2. Total Weight Added (KLBS)
   double get totalPoundsAdded {
     double effectiveDensity = _inputs.density;
-    // Handle SG logic
     if (effectiveDensity < 1.0 && effectiveDensity > 0) {
       effectiveDensity = effectiveDensity * 8.345;
     }
@@ -188,17 +182,50 @@ class CalculatorController extends ChangeNotifier {
     double rawPounds = totalMeteredGallons * effectiveDensity;
     double kLbs = rawPounds / 1000;
 
+    // Truncate to 1 decimal
     return (kLbs * 10).truncateToDouble() / 10;
   }
 
-  // 3. Total Computed Fuel
+  /// 3. Total Computed Fuel (KLBS)
   double get totalComputedFuel {
     double beforeTotal = _inputs.readingsBefore.total;
-
     return beforeTotal + totalPoundsAdded;
   }
 
+  /// 4. Discrepancy (KLBS)
   double get discrepancy {
     return _inputs.readingsAfter.total - totalComputedFuel;
+  }
+
+  // --- SAFETY & VALIDATION RULES ---
+
+  /// Rule 1: Tolerance Limit
+  /// "Within 5% OR 5,000 Lb of total after, whichever is less"
+  double get toleranceLimit {
+    final double totalAfter = _inputs.readingsAfter.total;
+
+    final double percentLimit = totalAfter * 0.05; // 5%
+    const double flatLimit = 5.0; // 5,000 lbs (in KLBS)
+
+    return math.min(percentLimit, flatLimit);
+  }
+
+  bool get isWithinTolerance {
+    return discrepancy.abs() <= toleranceLimit;
+  }
+
+  /// Rule 2: Minimum Fuel
+  /// "In no case can Total After fueling be less than raw planned fuel"
+  bool get isFuelSufficient {
+    // If planned fuel is 0 (not entered), we might skip this check or return true
+    if (_plan.plannedFuel == 0) return true;
+
+    // Compare After Readings with Base Plan
+    return _inputs.readingsAfter.total >= _plan.plannedFuel;
+  }
+
+  /// Overall Safety Status
+  bool get isSafe {
+    return isWithinTolerance && isFuelSufficient;
   }
 }

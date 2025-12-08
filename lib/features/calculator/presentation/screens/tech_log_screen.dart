@@ -14,20 +14,53 @@ class TechLogScreen extends StatelessWidget {
     final inputs = controller.inputs;
     final theme = Theme.of(context);
 
-    // Calculation Results
+    // Safety Checks
+    final bool isSafe = controller.isSafe;
+    // final bool toleranceOk = controller.isWithinTolerance;
+    final bool fuelOk = controller.isFuelSufficient;
+
     final double discrepancy = controller.discrepancy;
-    final bool isSafe = discrepancy.abs() <= 0.2;
+    final double limit = controller.toleranceLimit;
 
     // Formatting
-    final weightFormat = NumberFormat("#,##0.0"); // For KLBS (e.g. 71.9)
-    final volFormat = NumberFormat("#,##0"); // For Gallons (e.g. 10.739)
-    final intFormat = NumberFormat("#,##0"); // For Raw Liters
+    final weightFormat = NumberFormat("#,##0.0");
+    final volFormat = NumberFormat("#,##0");
+    final intFormat = NumberFormat("#,##0");
     final dateFormat = DateFormat('MM/dd/yy');
+
+    // Determine Status Message & Color
+    String statusTitle;
+    String statusSubtitle;
+    Color statusColor;
+    IconData statusIcon;
+
+    if (isSafe) {
+      statusTitle = "WITHIN LIMITS";
+      statusSubtitle =
+          "Discrepancy: ${weightFormat.format(discrepancy)} (Limit: +/-${weightFormat.format(limit)})";
+      statusColor = Colors.green.shade800;
+      statusIcon = Icons.check_circle;
+    } else if (!fuelOk) {
+      // Priority Error: Not enough fuel
+      statusTitle = "BELOW PLANNED FUEL";
+      statusSubtitle =
+          "Total After (${weightFormat.format(inputs.readingsAfter.total)}) < Planned (${weightFormat.format(plan.plannedFuel)})";
+      statusColor = Colors.red.shade900;
+      statusIcon = Icons.error;
+    } else {
+      // Tolerance Error
+      statusTitle = "EXCEEDS TOLERANCE";
+      statusSubtitle =
+          "Discrepancy ${weightFormat.format(discrepancy)} > Limit ${weightFormat.format(limit)}";
+      statusColor = Colors.orange.shade900;
+      statusIcon = Icons.warning_amber_rounded;
+    }
+
     return Scaffold(
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
-          // NEW: DATE HEADER
+          // DATE HEADER
           Center(
             child: Padding(
               padding: const EdgeInsets.only(bottom: 16.0),
@@ -41,11 +74,11 @@ class TechLogScreen extends StatelessWidget {
             ),
           ),
 
-          // 1. STATUS BANNER
+          // 1. STATUS BANNER (Dynamic)
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isSafe ? Colors.green.shade800 : Colors.red.shade900,
+              color: statusColor,
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
@@ -57,18 +90,14 @@ class TechLogScreen extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(
-                  isSafe ? Icons.check_circle : Icons.warning_amber_rounded,
-                  color: Colors.white,
-                  size: 32,
-                ),
+                Icon(statusIcon, color: Colors.white, size: 32),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isSafe ? 'WITHIN LIMITS' : 'EXCEEDS TOLERANCE',
+                        statusTitle,
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -76,9 +105,7 @@ class TechLogScreen extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        isSafe
-                            ? 'Discrepancy is ${weightFormat.format(discrepancy)} lbs'
-                            : 'Discrepancy of ${weightFormat.format(discrepancy)} lbs > 0.2 lbs',
+                        statusSubtitle,
                         style: const TextStyle(color: Colors.white70),
                       ),
                     ],
@@ -126,9 +153,9 @@ class TechLogScreen extends StatelessWidget {
                 ),
               ),
               columnWidths: const {
-                0: FlexColumnWidth(1.2), // Tank Name
-                1: FlexColumnWidth(1), // Before
-                2: FlexColumnWidth(1), // After
+                0: FlexColumnWidth(1.2),
+                1: FlexColumnWidth(1),
+                2: FlexColumnWidth(1),
               },
               children: [
                 TableRow(
@@ -213,23 +240,19 @@ class TechLogScreen extends StatelessWidget {
           ),
           const SizedBox(height: 24),
 
-          // 4. COMPUTED DATA (MODIFIED LAYOUT)
+          // 4. COMPUTED DATA
           _buildSectionHeader(context, 'Computed Data'),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
-                  // 1. Total Metered Fuel
-                  // If liters, converted to Gallons. If gallons, raw.
                   _buildSummaryRow(
                     context,
                     'Total Metered Fuel',
                     '${volFormat.format(controller.totalMeteredGallons)} gal',
                   ),
                   const Divider(),
-
-                  // 2. Fuel Density
                   _buildSummaryRow(
                     context,
                     'Fuel Density',
@@ -238,42 +261,31 @@ class TechLogScreen extends StatelessWidget {
                         : '${inputs.density} lbs/gal',
                   ),
                   const Divider(),
-
-                  // 3. Total Pounds Added
-                  // Metered (Gal) x Density
                   _buildSummaryRow(
                     context,
                     'Total Pounds Added',
-                    '${weightFormat.format(controller.totalPoundsAdded)} lbs',
+                    weightFormat.format(controller.totalPoundsAdded),
                     isBold: true,
                   ),
                   const Divider(),
-
-                  // 4. Total Computed Fuel
-                  // Before + Added
                   _buildSummaryRow(
                     context,
                     'Total Computed Fuel',
-                    '${weightFormat.format(controller.totalComputedFuel)} lbs',
+                    weightFormat.format(controller.totalComputedFuel),
                     isBold: true,
                     highlightColor: theme.colorScheme.primary,
                   ),
                   const Divider(),
-
-                  // 5. Total Requested
-                  // Base + Extra
                   _buildSummaryRow(
                     context,
                     'Total Requested',
-                    '${weightFormat.format(plan.plannedFuel)} lbs',
+                    weightFormat.format(plan.totalTargetFuel),
                   ),
-
-                  // 6. Total Liters (Conditional)
                   if (inputs.uploadUnit == FuelUnit.liters) ...[
                     const Divider(),
                     _buildSummaryRow(
                       context,
-                      'Total Liters (Raw)',
+                      'Total Liters',
                       '${intFormat.format(controller.totalTruckRawVolume)} L',
                       color: Colors.orange,
                     ),
@@ -288,7 +300,7 @@ class TechLogScreen extends StatelessWidget {
     );
   }
 
-  // ... (Helper methods for rows and info items remain the same) ...
+  // Helpers
   TableRow _buildTableRow(String label, double? before, double? after) {
     return TableRow(
       children: [
