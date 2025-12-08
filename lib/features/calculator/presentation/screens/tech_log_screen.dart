@@ -124,12 +124,12 @@ class TechLogScreen extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  _buildInfoItem(context, 'Flight', plan.flightNumber),
                   _buildInfoItem(
                     context,
                     'Registration',
                     controller.formattedRegistration,
                   ),
-                  _buildInfoItem(context, 'Flight', plan.flightNumber),
                   _buildInfoItem(context, 'Destination', plan.destination),
                 ],
               ),
