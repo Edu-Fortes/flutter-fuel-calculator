@@ -12,6 +12,7 @@ FlightPlan _$FlightPlanFromJson(Map<String, dynamic> json) => FlightPlan(
   destination: json['destination'] as String? ?? '',
   aircraftModel: json['aircraft_model'] as String? ?? '',
   plannedFuel: (json['planned_fuel'] as num?)?.toDouble() ?? 0.0,
+  extraFuel: (json['extra_fuel'] as num?)?.toDouble() ?? 0.0,
   date: DateTime.parse(json['date'] as String),
   suggestedDistribution: json['suggested_distribution'] == null
       ? const TankReadings(left: 0, center: 0, right: 0)
@@ -27,6 +28,7 @@ Map<String, dynamic> _$FlightPlanToJson(FlightPlan instance) =>
       'destination': instance.destination,
       'aircraft_model': instance.aircraftModel,
       'planned_fuel': instance.plannedFuel,
+      'extra_fuel': instance.extraFuel,
       'date': instance.date.toIso8601String(),
       'suggested_distribution': instance.suggestedDistribution,
     };

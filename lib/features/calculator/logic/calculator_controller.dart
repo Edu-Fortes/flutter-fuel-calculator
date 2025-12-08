@@ -4,8 +4,7 @@ import '../domain/flight_data.dart';
 class CalculatorController extends ChangeNotifier {
   // --- Constants for Limits ---
   static const double kMaxTankSafe = 40.1; // Distribution limit
-  static const double kMaxTankPhysical = 40.7; // Physical limit left/right
-  static const double kMaxCenterPhysical = 80.4; // Physical limit center
+  static const double kLitersToGallons = 0.2641; // Conversion Factor
 
   // --- State ---
   FlightPlan _plan = FlightPlan(date: DateTime.now(), aircraftModel: '767');
@@ -16,24 +15,15 @@ class CalculatorController extends ChangeNotifier {
   FuelInputData get inputs => _inputs;
 
   // --- Actions ---
-  /// Resets the entire session to default values
   void reset() {
-    // Reset Plan (keep current date, default to 767)
     _plan = FlightPlan(date: DateTime.now(), aircraftModel: '767');
-
-    // Reset Inputs (default density 6.70)
     _inputs = const FuelInputData(density: 6.70, uploadUnit: FuelUnit.liters);
-
     notifyListeners();
   }
 
   // --- Helpers for Display ---
-
-  /// Helper to get the raw total volume (for display in Tech Log)
   double get totalTruckRawVolume => _inputs.totalTruckVolume;
 
-  // --- Formatting Helper ---
-  /// Rounds a double to 1 decimal place for calculations
   double _roundTo1Decimal(double value) {
     return (value * 10).round() / 10;
   }
@@ -41,7 +31,6 @@ class CalculatorController extends ChangeNotifier {
   String get formattedRegistration {
     final raw = _plan.aircraftRegistration;
     if (raw.isEmpty) return 'N/A';
-    // Format: N + number + FE
     return 'N${raw}FE';
   }
 
@@ -55,9 +44,8 @@ class CalculatorController extends ChangeNotifier {
     DateTime? date,
   }) {
     _plan = _plan.copyWith(
-      aircraftRegistration: reg, // Storing raw number "123"
+      aircraftRegistration: reg,
       flightNumber: flightNum,
-      // Logic: Force Uppercase for Destination
       destination: dest?.toUpperCase(),
       aircraftModel: model,
       date: date,
@@ -65,34 +53,50 @@ class CalculatorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Updates planned fuel and auto-calculates tank distribution
   void updatePlannedFuel(String value) {
-    final double? totalRequested = double.tryParse(value);
-    if (totalRequested == null) return;
+    final double? base = double.tryParse(value);
+    if (base == null) return;
 
-    // 1. Calculate Distribution Logic
+    // Update Base
+    _plan = _plan.copyWith(plannedFuel: base);
+    _recalculateDistribution();
+  }
+
+  // NEW: Update Extra Fuel
+  void updateExtraFuel(double delta) {
+    double newExtra = _plan.extraFuel + delta;
+    // Fix floating point errors (e.g. 0.3000004)
+    newExtra = double.parse(newExtra.toStringAsFixed(1));
+
+    // Prevent negative? Assuming yes for now.
+    if (newExtra < 0) newExtra = 0.0;
+
+    _plan = _plan.copyWith(extraFuel: newExtra);
+    _recalculateDistribution();
+  }
+
+  void _recalculateDistribution() {
+    // 1. Calculate Target (Base + Extra)
+    final double totalRequested = _plan.totalTargetFuel;
+
     double left = 0;
     double right = 0;
     double center = 0;
 
-    // The threshold is when both wings are at safe max (40.1 * 2 = 80.2)
     const double wingCapacity = kMaxTankSafe * 2;
 
     if (totalRequested <= wingCapacity) {
-      // Scenario: Less than wing capacity. Split equally.
       left = totalRequested / 2;
       right = totalRequested / 2;
       center = 0;
     } else {
-      // Scenario: Fill wings to safe max, rest to center.
       left = kMaxTankSafe;
       right = kMaxTankSafe;
       center = totalRequested - wingCapacity;
     }
 
-    // 2. Update Plan with new values (rounded to 1 decimal)
+    // 2. Update Plan
     _plan = _plan.copyWith(
-      plannedFuel: totalRequested,
       suggestedDistribution: TankReadings(
         left: _roundTo1Decimal(left),
         right: _roundTo1Decimal(right),
@@ -120,12 +124,14 @@ class CalculatorController extends ChangeNotifier {
   void updateTruckVolume(int index, String value) {
     final double? parsed = double.tryParse(value);
     if (parsed == null) return;
-
-    // Ensure we store it rounded to 1 decimal if needed,
-    // though usually raw input is preferred until display.
     final updatedList = List<double>.from(_inputs.truckVolumes);
     updatedList[index] = parsed;
     _inputs = _inputs.copyWith(truckVolumes: updatedList);
+    notifyListeners();
+  }
+
+  void toggleTruckUnit(FuelUnit unit) {
+    _inputs = _inputs.copyWith(uploadUnit: unit);
     notifyListeners();
   }
 
@@ -160,43 +166,39 @@ class CalculatorController extends ChangeNotifier {
     }
   }
 
-  void toggleTruckUnit(FuelUnit unit) {
-    _inputs = _inputs.copyWith(uploadUnit: unit);
-    notifyListeners();
-  }
+  // --- TECH LOG CALCULATIONS ---
 
-  // --- Calculations ---
-
-  double get totalUpliftVolumeGallons {
+  // 1. Total Metered Fuel (Normalized to Gallons)
+  double get totalMeteredGallons {
     double totalRaw = _inputs.totalTruckVolume;
     if (_inputs.uploadUnit == FuelUnit.liters) {
-      return totalRaw * 0.2641;
-    } else {
-      return totalRaw;
+      return totalRaw * kLitersToGallons;
     }
+    return totalRaw;
   }
 
-  /// Returns total Weight Added in Lbs
-  int get totalPoundsAdded {
+  // 2. Total Pounds Added
+  double get totalPoundsAdded {
     double effectiveDensity = _inputs.density;
-
-    // SMART LOGIC:
-    // If user enters specific gravity (e.g. 0.800), convert to Lbs/Gal.
-    // Uses 8.345 (approx weight of water in lbs/gal).
+    // Handle SG logic
     if (effectiveDensity < 1.0 && effectiveDensity > 0) {
       effectiveDensity = effectiveDensity * 8.345;
     }
 
-    return (totalUpliftVolumeGallons * effectiveDensity).round();
+    double rawPounds = totalMeteredGallons * effectiveDensity;
+    double kLbs = rawPounds / 1000;
+
+    return (kLbs * 10).truncateToDouble() / 10;
   }
 
-  double get gaugeDifference {
-    return _roundTo1Decimal(
-      _inputs.readingsAfter.total - _inputs.readingsBefore.total,
-    );
+  // 3. Total Computed Fuel
+  double get totalComputedFuel {
+    double beforeTotal = _inputs.readingsBefore.total;
+
+    return beforeTotal + totalPoundsAdded;
   }
 
   double get discrepancy {
-    return _roundTo1Decimal((totalPoundsAdded - gaugeDifference).abs());
+    return _inputs.readingsAfter.total - totalComputedFuel;
   }
 }
