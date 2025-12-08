@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../logic/calculator_controller.dart';
@@ -11,19 +12,20 @@ class PlanScreen extends StatefulWidget {
 }
 
 class _PlanScreenState extends State<PlanScreen> {
-  // Controllers to keep text fields in sync
+  // Controllers
   final TextEditingController _regController = TextEditingController();
   final TextEditingController _flightNumController = TextEditingController();
   final TextEditingController _destController = TextEditingController();
-  final TextEditingController _modelController = TextEditingController();
   final TextEditingController _plannedFuelController = TextEditingController();
+
+  // We don't need a controller for the Dropdown, just a local variable if strictly needed,
+  // but we can rely on the Provider state directly for the value.
 
   @override
   void dispose() {
     _regController.dispose();
     _flightNumController.dispose();
     _destController.dispose();
-    _modelController.dispose();
     _plannedFuelController.dispose();
     super.dispose();
   }
@@ -33,8 +35,6 @@ class _PlanScreenState extends State<PlanScreen> {
     final controller = context.watch<CalculatorController>();
     final plan = controller.plan;
     final theme = Theme.of(context);
-
-    // Date Format
     final dateStr = DateFormat('MM/dd/yy').format(plan.date);
 
     return SingleChildScrollView(
@@ -44,6 +44,7 @@ class _PlanScreenState extends State<PlanScreen> {
         children: [
           // 1. Date & Registration Header
           Card(
+            elevation: 2,
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -58,6 +59,9 @@ class _PlanScreenState extends State<PlanScreen> {
                   const Divider(),
                   TextField(
                     controller: _regController,
+                    // Number only keyboard
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration: const InputDecoration(
                       labelText: 'Aircraft Registration',
                     ),
@@ -73,6 +77,9 @@ class _PlanScreenState extends State<PlanScreen> {
           // 2. Flight Details
           TextField(
             controller: _flightNumController,
+            // Number only keyboard
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             decoration: const InputDecoration(
               labelText: 'Flight Number',
               prefixIcon: Icon(Icons.flight_takeoff),
@@ -80,8 +87,11 @@ class _PlanScreenState extends State<PlanScreen> {
             onChanged: (val) => controller.updateFlightDetails(flightNum: val),
           ),
           const SizedBox(height: 12),
+
           TextField(
             controller: _destController,
+            // Uppercase keyboard and formatting
+            textCapitalization: TextCapitalization.characters,
             decoration: const InputDecoration(
               labelText: 'Destination',
               prefixIcon: Icon(Icons.location_on),
@@ -89,13 +99,23 @@ class _PlanScreenState extends State<PlanScreen> {
             onChanged: (val) => controller.updateFlightDetails(dest: val),
           ),
           const SizedBox(height: 12),
-          TextField(
-            controller: _modelController,
+
+          // Dropdown for Aircraft Model
+          DropdownButtonFormField<String>(
+            initialValue: plan.aircraftModel.isEmpty
+                ? null
+                : plan.aircraftModel,
             decoration: const InputDecoration(
               labelText: 'Aircraft Model',
               prefixIcon: Icon(Icons.airplanemode_active),
+              border: OutlineInputBorder(),
             ),
-            onChanged: (val) => controller.updateFlightDetails(model: val),
+            items: const [DropdownMenuItem(value: '767', child: Text('B767'))],
+            onChanged: (value) {
+              if (value != null) {
+                controller.updateFlightDetails(model: value);
+              }
+            },
           ),
           const SizedBox(height: 24),
 
@@ -169,7 +189,7 @@ class _PlanScreenState extends State<PlanScreen> {
       children: [
         Text(label, style: Theme.of(context).textTheme.bodySmall),
         Text(
-          value.toStringAsFixed(1), // 1 Decimal Place Rule
+          value.toStringAsFixed(1),
           style: Theme.of(
             context,
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),

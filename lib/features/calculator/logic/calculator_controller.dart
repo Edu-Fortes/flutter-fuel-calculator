@@ -8,7 +8,7 @@ class CalculatorController extends ChangeNotifier {
   static const double kMaxCenterPhysical = 80.4; // Physical limit center
 
   // --- State ---
-  FlightPlan _plan = FlightPlan(date: DateTime.now());
+  FlightPlan _plan = FlightPlan(date: DateTime.now(), aircraftModel: '767');
   FuelInputData _inputs = const FuelInputData();
 
   // --- Getters ---
@@ -21,6 +21,13 @@ class CalculatorController extends ChangeNotifier {
     return (value * 10).round() / 10;
   }
 
+  String get formattedRegistration {
+    final raw = _plan.aircraftRegistration;
+    if (raw.isEmpty) return 'N/A';
+    // Format: N + number + FE
+    return 'N${raw}FE';
+  }
+
   // --- Logic: Plan & Distribution ---
 
   void updateFlightDetails({
@@ -31,9 +38,10 @@ class CalculatorController extends ChangeNotifier {
     DateTime? date,
   }) {
     _plan = _plan.copyWith(
-      aircraftRegistration: reg,
+      aircraftRegistration: reg, // Storing raw number "123"
       flightNumber: flightNum,
-      destination: dest,
+      // Logic: Force Uppercase for Destination
+      destination: dest?.toUpperCase(),
       aircraftModel: model,
       date: date,
     );
