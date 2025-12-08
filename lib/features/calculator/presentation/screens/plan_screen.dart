@@ -35,7 +35,7 @@ class _PlanScreenState extends State<PlanScreen> {
     final theme = Theme.of(context);
 
     // Date Format
-    final dateStr = DateFormat('EEE, MMM d, yyyy').format(plan.date);
+    final dateStr = DateFormat('MM/dd/yy').format(plan.date);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
