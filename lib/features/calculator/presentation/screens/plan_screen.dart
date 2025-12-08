@@ -18,8 +18,22 @@ class _PlanScreenState extends State<PlanScreen> {
   final TextEditingController _destController = TextEditingController();
   final TextEditingController _plannedFuelController = TextEditingController();
 
-  // We don't need a controller for the Dropdown, just a local variable if strictly needed,
-  // but we can rely on the Provider state directly for the value.
+  @override
+  void initState() {
+    super.initState();
+    // PERSISTENCE FIX: Initialize controllers with existing data from Provider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final controller = context.read<CalculatorController>();
+      final plan = controller.plan;
+
+      _regController.text = plan.aircraftRegistration;
+      _flightNumController.text = plan.flightNumber;
+      _destController.text = plan.destination;
+      if (plan.plannedFuel > 0) {
+        _plannedFuelController.text = plan.plannedFuel.toString();
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -59,7 +73,6 @@ class _PlanScreenState extends State<PlanScreen> {
                   const Divider(),
                   TextField(
                     controller: _regController,
-                    // Number only keyboard
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration: const InputDecoration(
@@ -77,7 +90,6 @@ class _PlanScreenState extends State<PlanScreen> {
           // 2. Flight Details
           TextField(
             controller: _flightNumController,
-            // Number only keyboard
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             decoration: const InputDecoration(
@@ -90,7 +102,6 @@ class _PlanScreenState extends State<PlanScreen> {
 
           TextField(
             controller: _destController,
-            // Uppercase keyboard and formatting
             textCapitalization: TextCapitalization.characters,
             decoration: const InputDecoration(
               labelText: 'Destination',
@@ -100,7 +111,6 @@ class _PlanScreenState extends State<PlanScreen> {
           ),
           const SizedBox(height: 12),
 
-          // Dropdown for Aircraft Model
           DropdownButtonFormField<String>(
             initialValue: plan.aircraftModel.isEmpty
                 ? null
@@ -126,17 +136,59 @@ class _PlanScreenState extends State<PlanScreen> {
             controller: _plannedFuelController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: const InputDecoration(
-              labelText: 'Planned Fuel (Lbs)',
+              labelText: 'Planned Fuel (Base)',
               suffixText: 'Lbs',
               border: OutlineInputBorder(),
             ),
             onChanged: (val) => controller.updatePlannedFuel(val),
           ),
 
+          const SizedBox(height: 12),
+
+          // NEW: Extra Fuel UI
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.5,
+              ),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: theme.dividerColor),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text("Extra Fuel", style: theme.textTheme.titleMedium),
+                Row(
+                  children: [
+                    IconButton.filledTonal(
+                      icon: const Icon(Icons.remove),
+                      onPressed: () => controller.updateExtraFuel(-0.1),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      "+ ${plan.extraFuel.toStringAsFixed(1)}",
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    IconButton.filledTonal(
+                      icon: const Icon(Icons.add),
+                      onPressed: () => controller.updateExtraFuel(0.1),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
           const SizedBox(height: 16),
 
           // 4. Dynamic Distribution Display
-          if (plan.plannedFuel > 0) ...[
+          if (plan.totalTargetFuel > 0) ...[
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -149,7 +201,7 @@ class _PlanScreenState extends State<PlanScreen> {
               child: Column(
                 children: [
                   Text(
-                    'Required Distribution',
+                    'Required Distribution (Total: ${plan.totalTargetFuel.toStringAsFixed(1)})',
                     style: theme.textTheme.titleMedium?.copyWith(
                       color: theme.colorScheme.onSecondaryContainer,
                     ),

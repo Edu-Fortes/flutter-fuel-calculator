@@ -11,9 +11,10 @@ class FlightPlan {
   final String destination;
   final String aircraftModel;
   final double plannedFuel;
+  final double extraFuel; // NEW: Holds the extra increment (e.g., 0.2)
   final DateTime date;
 
-  // NEW: Holds the calculated distribution (Target values)
+  // Holds the calculated distribution
   final TankReadings suggestedDistribution;
 
   const FlightPlan({
@@ -22,6 +23,7 @@ class FlightPlan {
     this.destination = '',
     this.aircraftModel = '',
     this.plannedFuel = 0.0,
+    this.extraFuel = 0.0, // Default to 0
     required this.date,
     this.suggestedDistribution = const TankReadings(
       left: 0,
@@ -30,12 +32,16 @@ class FlightPlan {
     ),
   });
 
+  // Helper to get total for distribution logic
+  double get totalTargetFuel => plannedFuel + extraFuel;
+
   FlightPlan copyWith({
     String? aircraftRegistration,
     String? flightNumber,
     String? destination,
     String? aircraftModel,
     double? plannedFuel,
+    double? extraFuel,
     DateTime? date,
     TankReadings? suggestedDistribution,
   }) {
@@ -45,6 +51,7 @@ class FlightPlan {
       destination: destination ?? this.destination,
       aircraftModel: aircraftModel ?? this.aircraftModel,
       plannedFuel: plannedFuel ?? this.plannedFuel,
+      extraFuel: extraFuel ?? this.extraFuel,
       date: date ?? this.date,
       suggestedDistribution:
           suggestedDistribution ?? this.suggestedDistribution,
@@ -79,7 +86,7 @@ class TankReadings {
   Map<String, dynamic> toJson() => _$TankReadingsToJson(this);
 }
 
-// ... (FuelInputData remains the same as previous step) ...
+// ... (FuelInputData remains unchanged from your original file) ...
 @JsonSerializable(fieldRename: FieldRename.snake)
 class FuelInputData {
   final TankReadings readingsBefore;
