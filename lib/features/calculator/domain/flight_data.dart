@@ -92,7 +92,7 @@ class FuelInputData {
     this.readingsBefore = const TankReadings(),
     this.readingsAfter = const TankReadings(),
     this.truckVolumes = const [0.0],
-    this.density = 0.800,
+    this.density = 6.70,
     this.uploadUnit = FuelUnit.liters,
   });
 

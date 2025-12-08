@@ -58,7 +58,7 @@ FuelInputData _$FuelInputDataFromJson(
           ?.map((e) => (e as num).toDouble())
           .toList() ??
       const [0.0],
-  density: (json['density'] as num?)?.toDouble() ?? 0.800,
+  density: (json['density'] as num?)?.toDouble() ?? 6.70,
   uploadUnit:
       $enumDecodeNullable(_$FuelUnitEnumMap, json['upload_unit']) ??
       FuelUnit.liters,
