@@ -86,22 +86,11 @@ class ScaffoldWithNavBar extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: SegmentedButton<String>(
+              showSelectedIcon: false,
               segments: const [
-                ButtonSegment(
-                  value: '/plan',
-                  label: Text('Plan'),
-                  icon: Icon(Icons.flight),
-                ),
-                ButtonSegment(
-                  value: '/input',
-                  label: Text('Inputs'),
-                  icon: Icon(Icons.edit),
-                ),
-                ButtonSegment(
-                  value: '/techlog',
-                  label: Text('Tech Log'),
-                  icon: Icon(Icons.assignment),
-                ),
+                ButtonSegment(value: '/plan', label: Text('Plan')),
+                ButtonSegment(value: '/input', label: Text('Inputs')),
+                ButtonSegment(value: '/techlog', label: Text('Tech Log')),
               ],
               selected: {location},
               onSelectionChanged: (Set<String> newSelection) {
