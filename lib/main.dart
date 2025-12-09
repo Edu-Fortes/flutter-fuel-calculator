@@ -43,7 +43,7 @@ class FuelUpliftApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => CalculatorController(),
       child: MaterialApp.router(
-        title: 'Fuel Uplift',
+        title: 'Fuel Calculator',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           useMaterial3: true,
@@ -74,7 +74,7 @@ class ScaffoldWithNavBar extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Fuel Uplift'),
+        title: const Text('Fuel Calculator'),
         centerTitle: true,
         actions: [
           // RESET BUTTON
