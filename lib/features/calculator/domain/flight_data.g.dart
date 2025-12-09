@@ -9,7 +9,7 @@ part of 'flight_data.dart';
 FlightPlan _$FlightPlanFromJson(Map<String, dynamic> json) => FlightPlan(
   aircraftRegistration: json['aircraft_registration'] as String? ?? '',
   flightNumber: json['flight_number'] as String? ?? '',
-  destination: json['destination'] as String? ?? '',
+  station: json['station'] as String? ?? '',
   aircraftModel: json['aircraft_model'] as String? ?? '',
   plannedFuel: (json['planned_fuel'] as num?)?.toDouble() ?? 0.0,
   extraFuel: (json['extra_fuel'] as num?)?.toDouble() ?? 0.0,
@@ -25,7 +25,7 @@ Map<String, dynamic> _$FlightPlanToJson(FlightPlan instance) =>
     <String, dynamic>{
       'aircraft_registration': instance.aircraftRegistration,
       'flight_number': instance.flightNumber,
-      'destination': instance.destination,
+      'station': instance.station,
       'aircraft_model': instance.aircraftModel,
       'planned_fuel': instance.plannedFuel,
       'extra_fuel': instance.extraFuel,

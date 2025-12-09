@@ -46,7 +46,7 @@ class CalculatorController extends ChangeNotifier {
     _plan = _plan.copyWith(
       aircraftRegistration: reg,
       flightNumber: flightNum,
-      destination: dest?.toUpperCase(),
+      station: dest?.toUpperCase(),
       aircraftModel: model,
       date: date,
     );

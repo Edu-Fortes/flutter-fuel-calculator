@@ -8,7 +8,7 @@ enum FuelUnit { liters, gallons }
 class FlightPlan {
   final String aircraftRegistration;
   final String flightNumber;
-  final String destination;
+  final String station;
   final String aircraftModel;
   final double plannedFuel;
   final double extraFuel; // NEW: Holds the extra increment (e.g., 0.2)
@@ -20,7 +20,7 @@ class FlightPlan {
   const FlightPlan({
     this.aircraftRegistration = '',
     this.flightNumber = '',
-    this.destination = '',
+    this.station = '',
     this.aircraftModel = '',
     this.plannedFuel = 0.0,
     this.extraFuel = 0.0, // Default to 0
@@ -38,7 +38,7 @@ class FlightPlan {
   FlightPlan copyWith({
     String? aircraftRegistration,
     String? flightNumber,
-    String? destination,
+    String? station,
     String? aircraftModel,
     double? plannedFuel,
     double? extraFuel,
@@ -48,7 +48,7 @@ class FlightPlan {
     return FlightPlan(
       aircraftRegistration: aircraftRegistration ?? this.aircraftRegistration,
       flightNumber: flightNumber ?? this.flightNumber,
-      destination: destination ?? this.destination,
+      station: station ?? this.station,
       aircraftModel: aircraftModel ?? this.aircraftModel,
       plannedFuel: plannedFuel ?? this.plannedFuel,
       extraFuel: extraFuel ?? this.extraFuel,

@@ -124,13 +124,13 @@ class TechLogScreen extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  _buildInfoItem(context, 'Airport ID', plan.station),
                   _buildInfoItem(context, 'Flight', plan.flightNumber),
                   _buildInfoItem(
                     context,
                     'Registration',
                     controller.formattedRegistration,
                   ),
-                  _buildInfoItem(context, 'Destination', plan.destination),
                 ],
               ),
             ),
@@ -279,7 +279,7 @@ class TechLogScreen extends StatelessWidget {
                   _buildSummaryRow(
                     context,
                     'Total Requested',
-                    weightFormat.format(plan.totalTargetFuel),
+                    weightFormat.format(plan.plannedFuel),
                   ),
                   if (inputs.uploadUnit == FuelUnit.liters) ...[
                     const Divider(),

@@ -28,7 +28,7 @@ class _PlanScreenState extends State<PlanScreen> {
 
       _regController.text = plan.aircraftRegistration;
       _flightNumController.text = plan.flightNumber;
-      _destController.text = plan.destination;
+      _destController.text = plan.station;
       if (plan.plannedFuel > 0) {
         _plannedFuelController.text = plan.plannedFuel.toString();
       }
@@ -104,7 +104,7 @@ class _PlanScreenState extends State<PlanScreen> {
             controller: _destController,
             textCapitalization: TextCapitalization.characters,
             decoration: const InputDecoration(
-              labelText: 'Destination',
+              labelText: 'Station',
               prefixIcon: Icon(Icons.location_on),
             ),
             onChanged: (val) => controller.updateFlightDetails(dest: val),
